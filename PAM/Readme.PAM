@@ -1,0 +1,108 @@
+1. Создаем согласно предложенному Vagrantfile  виртуалку pam
+    на базе banto/Centos-8.4
+
+2. Создаем предложенными командами пользовалей и группу и у
+станавливаем им пароли  (useradd, groupadd)
+
+Включаем их в привилигерованную группу пользователей
+
+usermod otusadm -a -G admin && usermod root -a -G admin && usermod vagrant -a -G admin
+
+ Получаем:
+
+[root@pam ~]# grep admin /etc/group
+admin:x:1003:otusadm,root,vagrant
+
+3. Настраиваем sshd на доступ по паролю
+
+root@pam ~]# grep Password /etc/ssh/sshd_config 
+#PasswordAuthentication yes
+
+PasswordAuthentication yes
+
+И параметр  UsePAM  yes
+
+
+4.  Берем предложенный скрипт для работы с PAM
+ 
+    и чуть-чуть его модифицируем, добавив сообщение 
+echo "Not privileged user $PAM_USER!" >> /var/log/secure
+
+/usr/local/bin/login.sh
+
+ #!/bin/bash
+#Первое условие: если день недели суббота или воскресенье
+if [ $(date +%a) = "Sat" ] || [ $(date +%a) = "Sun" ]; then
+ #Второе условие: входит ли пользователь в группу admin
+ if getent group admin | grep -qw "$PAM_USER"; then
+        #Если пользователь входит в группу admin, то он может подключиться
+        exit 0
+      else
+        #Иначе ошибка (не сможет подключиться)
+        echo "Not privileged user $PAM_USER!" >> /var/log/secure
+        exit 1
+    fi
+  #Если день не выходной, то подключиться может любой пользователь
+  else
+   exit 0
+fi
+
+  
+    5.  Теперь добавим  строку в /etc/pam.d/sshd
+
+session    required     pam_exec.so  /usr/local/bin/login.sh       
+
+
+
+   6.  В соответствии с правилами в выходные дни по субботам и воскресеньям
+      на систему могут заходить только пользователи из группы admin
+
+     установим время  , чтобы оно попадало на воскресенье в виртуальной машине  Pam
+
+
+       date -s "1 OCT 2006 18:00:00"
+
+
+       Однако мы замечаем, что это время постоянно возвращается на правильное время .  Чтобы это исключить, отключим сервис VirtualBox на гостевой машине pam.  
+
+
+  7. После чего проверяем работу PAM-а
+
+           root@pam log]# date
+Sun Oct  1 18:22:14 MSD 2006
+[root@pam log]# ssh otus@localhost
+otus@localhost's password: 
+
+This system is built by the Bento project by Chef Software
+More information can be found at https://github.com/chef/bento
+/usr/local/bin/login.sh failed: exit code 1
+Last login: Sun Oct  1 18:06:55 2006 from ::1
+Connection to localhost closed.
+
+  В файле /var/log/secure находим строчку о юзере otus
+
+Oct  1 18:06:55 pam systemd[3916]: pam_unix(systemd-user:session): session opened for user otus by (uid=0)
+
+Not privileged user otus!
+
+
+Oct  1 18:06:55 pam sshd[3911]: pam_unix(sshd:session): session opened for user otus by (ui
+
+
+ При этом логин otusadm вполне работает
+
+
+
+[root@pam log]# date
+Sun Oct  1 18:24:32 MSD 2006
+[root@pam log]# ssh otusadm@localhost
+otusadm@localhost's password: 
+
+This system is built by the Bento project by Chef Software
+More information can be found at https://github.com/chef/bento
+Last failed login: Thu May 25 09:58:27 MSK 2023 from 192.168.56.1 on ssh:notty
+There was 1 failed login attempt since the last successful login.
+Last login: Sun Oct  1 18:04:29 2006 from ::1
+[otusadm@pam ~]$ 
+
+
