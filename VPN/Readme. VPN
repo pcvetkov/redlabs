@@ -1,0 +1,291 @@
+1. Делаем необходимые настройки на клиенте и сервере согласно инструкции.
+
+2. Замеряем скорость в режиме tap openvpn
+
+   Получаем скорость примерно  такую
+
+                      
+ 0.00-40.06  sec   181 MBytes  37.9 Mbits/sec   receiver               
+
+
+3. Устанавливаем режим tun openvpn:
+
+
+[ ID] Interval           Transfer     Bitrate
+[  5]   0.00-40.04  sec   178 MBytes  37.2 Mbits/sec                  receiver 
+
+Вывод: производительность чуть-чуть снизилась
+
+
+4. Openvpn + EASY RSA
+
+4.1 После установки пакетов easy-rsa и openvpn на клиенте и сервере
+выполняем команды
+
+easyrsa init-pki
+easyrsa build-ca
+
+
+4.2 На сервере:
+
+root@server 3.0.8]# ./easyrsa  gen-req server nopass
+Using SSL: openssl OpenSSL 1.1.1g FIPS  21 Apr 2020
+Generating a RSA private key
+....................+++++
+..............+++++
+writing new private key to '/usr/share/easy-rsa/3.0.8/pki/easy-rsa-3729.3ELpAN/tmp.yHSoyO'
+-----
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Common Name (eg: your user, host, or server name) [myserver]:
+
+Keypair and certificate request completed. Your files are:
+req: /usr/share/easy-rsa/3.0.8/pki/reqs/server.req
+key: /usr/share/easy-rsa/3.0.8/pki/private/server.key
+
+
+4.3
+
+На сервере:
+
+./easyrsa  sign-req server server
+
+
+openssl verify -CAfile pki/ca.crt pki/issued/server.crt 
+pki/issued/server.crt: OK
+
+
+4.4  
+
+
+На сервере для клиента:
+
+/easyrsa gen-req client nopass
+Using SSL: openssl OpenSSL 1.1.1g FIPS  21 Apr 2020
+Generating a RSA private key
+................................+++++
+.........+++++
+writing new private key to '/usr/share/easy-rsa/3/pki/easy-rsa-3787.1PdgEL/tmp.jN5jAA'
+-----
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Common Name (eg: your user, host, or server name) [client]:
+
+Keypair and certificate request completed. Your files are:
+req: /usr/share/easy-rsa/3/pki/reqs/client.req
+key: /usr/share/easy-rsa/3/pki/private/client.key
+
+4.5
+
+На клиенте
+
+./easyrsa sign-req client client
+Using SSL: openssl OpenSSL 1.1.1g FIPS  21 Apr 2020
+
+
+You are about to sign the following certificate.
+Please check over the details shown below for accuracy. Note that this request
+has not been cryptographically verified. Please be sure it came from a trusted
+source or that you have verified the request checksum with the sender.
+
+Request subject, to be signed as a client certificate for 825 days:
+
+subject=
+    commonName                = client
+
+
+Type the word 'yes' to continue, or any other input to abort.
+  Confirm request details: yes
+Using configuration from /usr/share/easy-rsa/3/pki/easy-rsa-3850.R1zoM1/tmp.LhAfCU
+Enter pass phrase for /usr/share/easy-rsa/3/pki/private/ca.key:
+Check that the request matches the signature
+Signature ok
+The Subject's Distinguished Name is as follows
+commonName            :ASN.1 12:'client'
+Certificate is to be certified until Oct  1 08:09:11 2025 GMT (825 days)
+
+Write out database with 1 new entries
+Data Base Updated
+
+Certificate created at: /usr/share/easy-rsa/3/pki/issued/client.crt
+
+
+Далее переносим на клиент сгенериованные файлы ca.crt client.key client.crt
+
+
+4.6
+
+На сервере 
+
+./easyrsa gen-dh
+
+
+4.7 
+
+На сервере копируем ключи
+cp pki/ca.crt  /etc/openvpn/server/
+cp pki/issued/myserver.crt  /etc/openvpn/server/
+cp pki/private/myserver.key  /etc/openvpn/server/
+
+
+4.8
+
+на клиенте копируем ключи
+
+  cp pki/ca.crt  /etc/openvpn/client/
+  cp pki/issued/client.crt  /etc/openvpn/client/
+  cp pki/private/client.key  /etc/openvpn/client/
+
+4.9
+
+На сервере создаем файл конфигурации /etc/openvpn/server/server.conf:
+
+port 1207
+proto udp
+dev tun
+ca /etc/openvpn/server/ca.crt
+cert /etc/openvpn/server/myserver.crt
+key /etc/openvpn/server/myserver.key
+dh /usr/share/easy-rsa/3/pki/dh.pem
+server 10.10.10.0 255.255.255.0
+ifconfig-pool-persist ipp.txt
+client-to-client
+client-config-dir /etc/openvpn/client
+keepalive 10 120
+comp-lzo
+persist-key
+persist-tun
+status /var/log/openvpn-status.log
+log /var/log/openvpn.log
+verb 3
+
+
+4.10 
+
+На клиенте создаем файл конфигурации  /etc/openvpn/client/client.conf
+dev tun
+proto udp
+remote 192.168.56.30 1207
+client
+resolv-retry infinite
+remote-cert-tls server
+ca /etc/openvpn/client/ca.crt
+cert /etc/openvpn/client.crt
+key /etc/openvpn/client.key
+route 192.168.56.0 255.255.255.0
+persist-key
+persist-tun
+comp-lzo
+verb 3
+
+4.11
+
+На сервере включаем
+
+
+echo 'net.ipv4.ip_forward = 1' >> /etc/sysctl.conf
+
+sysctl -p
+
+
+4.12
+
+На сервере и клиенте конфигурируем и запускаем  openvpn
+
+На сервере :
+
+[root@server server]# cat  /etc/systemd/system/openvpn@.service
+[Unit]
+Description=OpenVPN Tunneling Application On %I
+After=network.target
+
+[Service]
+Type=notify
+PrivateTmp=true
+ExecStart=/usr/sbin/openvpn --cd /etc/openvpn/server --config %i.conf
+
+[Install]
+WantedBy=multi-user.target
+
+systemctl start openvpn@server
+
+
+На клиенте запускаем аналогичный сервис с указанием файла конфигурации клиента
+
+
+4.13  
+
+Проверяем работу собранного стенда:
+
+Запускаем  openvpn на клиенте и смотрим вывод
+
+*****************************************************************
+[root@client client]# openvpn --config client.conf
+Thu Jul  6 08:17:23 2023 OpenVPN 2.4.12 x86_64-redhat-linux-gnu [SSL (OpenSSL)] [LZO] [LZ4] [EPOLL] [PKCS11] [MH/PKTINFO] [AEAD] built on Mar 17 2022
+Thu Jul  6 08:17:23 2023 library versions: OpenSSL 1.1.1g FIPS  21 Apr 2020, LZO 2.08
+Thu Jul  6 08:17:23 2023 TCP/UDP: Preserving recently used remote address: [AF_INET]192.168.56.30:1207
+Thu Jul  6 08:17:23 2023 Socket Buffers: R=[212992->212992] S=[212992->212992]
+Thu Jul  6 08:17:23 2023 UDP link local (bound): [AF_INET][undef]:1194
+Thu Jul  6 08:17:23 2023 UDP link remote: [AF_INET]192.168.56.30:1207
+Thu Jul  6 08:17:23 2023 TLS: Initial packet from [AF_INET]192.168.56.30:1207, sid=cd3efe05 0fccf560
+Thu Jul  6 08:17:23 2023 VERIFY OK: depth=1, CN=rasvpn
+Thu Jul  6 08:17:23 2023 VERIFY KU OK
+Thu Jul  6 08:17:23 2023 Validating certificate extended key usage
+Thu Jul  6 08:17:23 2023 ++ Certificate has EKU (str) TLS Web Server Authentication, expects TLS Web Server Authentication
+Thu Jul  6 08:17:23 2023 VERIFY EKU OK
+Thu Jul  6 08:17:23 2023 VERIFY OK: depth=0, CN=rasvpn
+Thu Jul  6 08:17:23 2023 WARNING: 'link-mtu' is used inconsistently, local='link-mtu 1542', remote='link-mtu 1602'
+Thu Jul  6 08:17:23 2023 WARNING: 'cipher' is used inconsistently, local='cipher BF-CBC', remote='cipher AES-256-CBC'
+Thu Jul  6 08:17:23 2023 WARNING: 'auth' is used inconsistently, local='auth SHA1', remote='auth SHA512'
+Thu Jul  6 08:17:23 2023 WARNING: 'keysize' is used inconsistently, local='keysize 128', remote='keysize 256'
+Thu Jul  6 08:17:23 2023 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, 2048 bit RSA
+Thu Jul  6 08:17:23 2023 [rasvpn] Peer Connection Initiated with [AF_INET]192.168.56.30:1207
+Thu Jul  6 08:17:24 2023 SENT CONTROL [rasvpn]: 'PUSH_REQUEST' (status=1)
+Thu Jul  6 08:17:24 2023 PUSH: Received control message: 'PUSH_REPLY,route 10.10.10.0 255.255.255.0,topology net30,ping 10,ping-restart 120,ifconfig 10.10.10.6 10.10.10.5,peer-id 0,cipher AES-256-GCM'
+Thu Jul  6 08:17:24 2023 OPTIONS IMPORT: timers and/or timeouts modified
+Thu Jul  6 08:17:24 2023 OPTIONS IMPORT: --ifconfig/up options modified
+Thu Jul  6 08:17:24 2023 OPTIONS IMPORT: route options modified
+Thu Jul  6 08:17:24 2023 OPTIONS IMPORT: peer-id set
+Thu Jul  6 08:17:24 2023 OPTIONS IMPORT: adjusting link_mtu to 1625
+Thu Jul  6 08:17:24 2023 OPTIONS IMPORT: data channel crypto options modified
+Thu Jul  6 08:17:24 2023 Data Channel: using negotiated cipher 'AES-256-GCM'
+Thu Jul  6 08:17:24 2023 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+Thu Jul  6 08:17:24 2023 Incoming Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+Thu Jul  6 08:17:24 2023 ROUTE: default_gateway=UNDEF
+Thu Jul  6 08:17:24 2023 TUN/TAP device tun0 opened
+Thu Jul  6 08:17:24 2023 TUN/TAP TX queue length set to 100
+Thu Jul  6 08:17:24 2023 /sbin/ip link set dev tun0 up mtu 1500
+Thu Jul  6 08:17:24 2023 /sbin/ip addr add dev tun0 local 10.10.10.6 peer 10.10.10.5
+Thu Jul  6 08:17:24 2023 /sbin/ip route add 192.168.56.0/24 via 10.10.10.5
+Thu Jul  6 08:17:24 2023 /sbin/ip route add 10.10.10.0/24 via 10.10.10.5
+Thu Jul  6 08:17:24 2023 WARNING: this configuration may cache passwords in memory -- use the auth-nocache option to prevent this
+Thu Jul  6 08:17:24 2023 Initialization Sequence Completed
+
+
+
+*********************************************************************
+
+
+4.14
+
+При попытке запустить Ping c клиента  на сервер  ответа не приходит
+
+ping 10.10.10.1  
+
+
+Разбираемся: оказывается, установлена неправильная маска /32 на интерфейсы
+10.10.10.6 (клиент) и 10.10.10.1 ( сервер )
+
+После установки правильной маски /24 пинг заработал
+
+
