@@ -1,0 +1,182 @@
+
+Предварительные замечания.
+
+Поскольку объем оперативной памяти на старом ноутбуке у меня всего 3 Гиг, то пришлось выполнять задания частями , указывая меньший объем памяти, который требовался для задачи. Частично проблему удалось решить за счет добавления swap-файла, который я разместил на USB-флешке.
+
+Итак.
+
+1. Собираем стенд согласно предложенной конфигурации.
+2. Инсталлируем IPA
+3. Проверяем результат
+
+[root@ipa ~]# kinit admin
+Password for admin@OTUS.LAN: 
+[root@ipa ~]# klist
+Ticket cache: KCM:0
+Default principal: admin@OTUS.LAN
+
+Valid starting       Expires              Service principal
+07/11/2023 16:23:19  07/12/2023 16:21:35  krbtgt/OTUS.LAN@OTUS.LAN
+
+ 4. Далее устанавливаем на клиенты LDAP  необходимый софт с помощью скрипта
+  ansible.
+
+
+5. Открываем консоль  ipa (Скан прилагается)
+
+6. Создаем пользователя  otus-user  на сервере IPA
+
+[root@ipa ~]# ipa user-add otus-user --first=Otus --last=User --password
+Password: 
+Enter Password again to verify: 
+----------------------
+Added user "otus-user"
+----------------------
+  User login: otus-user
+  First name: Otus
+  Last name: User
+  Full name: Otus User
+  Display name: Otus User
+  Initials: OU
+  Home directory: /home/otus-user
+  GECOS: Otus User
+  Login shell: /bin/sh
+  Principal name: otus-user@OTUS.LAN
+  Principal alias: otus-user@OTUS.LAN
+  User password expiration: 20230714082135Z
+  Email address: otus-user@otus.lan
+  UID: 1504800003
+  GID: 1504800003
+  Password: True
+  Member of groups: ipausers
+  Kerberos keys available: True
+
+:w
+
+ 4. Далее устанавливаем на клиенты LDAP  необходимый софт с помощью скрипта
+  ansible.
+
+
+5. Открываем консоль  ipa (Скан прилагается)
+
+6. Создаем пользователя  otus-user  на сервере IPA
+
+[root@ipa ~]# ipa user-add otus-user --first=Otus --last=User --password
+Password: 
+Enter Password again to verify: 
+----------------------
+Added user "otus-user"
+----------------------
+  User login: otus-user
+  First name: Otus
+  Last name: User
+  Full name: Otus User
+  Display name: Otus User
+  Initials: OU
+  Home directory: /home/otus-user
+  GECOS: Otus User
+  Login shell: /bin/sh
+  Principal name: otus-user@OTUS.LAN
+  Principal alias: otus-user@OTUS.LAN
+  User password expiration: 20230714082135Z
+  Email address: otus-user@otus.lan
+  UID: 1504800003
+  GID: 1504800003
+  Password: True
+  Member of groups: ipausers
+  Kerberos keys available: True
+
+:w
+
+ 4. Далее устанавливаем на клиенты LDAP  необходимый софт с помощью скрипта
+  ansible.
+
+
+5. Открываем консоль  ipa (Скан прилагается)
+
+6. Создаем пользователя  otus-user  на сервере IPA
+
+[root@ipa ~]# ipa user-add otus-user --first=Otus --last=User --password
+Password: 
+Enter Password again to verify: 
+----------------------
+Added user "otus-user"
+----------------------
+  User login: otus-user
+  First name: Otus
+  Last name: User
+  Full name: Otus User
+  Display name: Otus User
+  Initials: OU
+  Home directory: /home/otus-user
+  GECOS: Otus User
+  Login shell: /bin/sh
+  Principal name: otus-user@OTUS.LAN
+  Principal alias: otus-user@OTUS.LAN
+  User password expiration: 20230714082135Z
+  Email address: otus-user@otus.lan
+  UID: 1504800003
+  GID: 1504800003
+  Password: True
+  Member of groups: ipausers
+  Kerberos keys available: True
+
+:w
+
+ 4. Далее устанавливаем на клиенты LDAP  необходимый софт с помощью скрипта
+  ansible.
+
+
+5. Открываем консоль  ipa (Скан прилагается - admin.jpg )
+
+6. Создаем пользователя  otus-user  на сервере IPA
+
+[root@ipa ~]# ipa user-add otus-user --first=Otus --last=User --password
+Password: 
+Enter Password again to verify: 
+----------------------
+Added user "otus-user"
+----------------------
+  User login: otus-user
+  First name: Otus
+  Last name: User
+  Full name: Otus User
+  Display name: Otus User
+  Initials: OU
+  Home directory: /home/otus-user
+  GECOS: Otus User
+  Login shell: /bin/sh
+  Principal name: otus-user@OTUS.LAN
+  Principal alias: otus-user@OTUS.LAN
+  User password expiration: 20230714082135Z
+  Email address: otus-user@otus.lan
+  UID: 1504800003
+  GID: 1504800003
+  Password: True
+  Member of groups: ipausers
+  Kerberos keys available: True
+
+7. После добавление пользователя мы находим его в консоли ipa ( otus.jpg )
+
+
+8. Теперь мы сможем с этим пользователем  заходить на любой из хостов, включая  ipa, client1  и client2
+
+Проверяем это
+
+
+[vagrant@client1 ~]$ ssh otus-user@192.168.57.12
+The authenticity of host '192.168.57.12 (<no hostip for proxy command>)' can't be established.
+ECDSA key fingerprint is SHA256:8klUsP88Tv7rMinZU52N4xHo2zWU4gDes+CxeQXVphM.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '192.168.57.12' (ECDSA) to the list of known hosts.
+Password: 
+
+This system is built by the Bento project by Chef Software
+More information can be found at https://github.com/chef/bento
+[otus-user@client2 ~]$ 
+
+ Вывод:
+
+   LDAP работает!
+
+
